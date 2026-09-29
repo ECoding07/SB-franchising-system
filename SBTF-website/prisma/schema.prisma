@@ -384,6 +384,33 @@ model SystemSetting {
   @@map("system_settings")
 }
 
+model SystemLog {
+  id        String    @id @default(uuid())
+  level     String    @default("info")
+  source    String
+  event     String
+  message   String?
+  metadata  Json?
+  ipAddress String?   @map("ip_address")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([level])
+  @@index([source, event])
+  @@index([createdAt])
+  @@map("system_logs")
+}
+
+model RetentionPolicy {
+  id            String    @id @default(uuid())
+  recordType    String    @unique @map("record_type")
+  retentionDays Int       @map("retention_days")
+  enabled       Boolean   @default(true)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@map("retention_policies")
+}
+
 model AnalyticsSummary {
   id        String   @id @default(uuid())
   periodKey String   @map("period_key")

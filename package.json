@@ -1,0 +1,23 @@
+{
+  "name": "sb-franchising-system",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "packages/shared",
+    "SBTF-website",
+    "SBTF-application"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev --workspace SBTF-website",
+    "dev:app": "npm run start --workspace SBTF-application",
+    "build:web": "npm run build --workspace SBTF-website",
+    "lint": "npm run lint --workspace SBTF-website",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "allowScripts": {
+    "prisma": true,
+    "@prisma/engines": true,
+    "unrs-resolver": true,
+    "esbuild@0.28.2": true
+  }
+}

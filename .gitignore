@@ -1,0 +1,6 @@
+# dependencies (hoisted to workspace root)
+/node_modules/
+
+# logs
+*.log
+npm-debug.log*
