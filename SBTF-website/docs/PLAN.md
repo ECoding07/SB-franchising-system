@@ -1,9 +1,13 @@
 # Build Plan — SB Franchising System
 
 **Created:** Wed, 30 Sep 2026
+**Last updated:** Wed, 30 Sep 2026 — mobile confirmed as a panel requirement
 **Status:** Planning complete, execution not started
 **Context:** [2026-09-29-session](2026-09-29-session.md) (foundation) · [2026-09-30-session](2026-09-30-session.md) (phases 0–5)
-**Repo state at time of writing:** `809665f`, working tree clean
+**Repo:** https://github.com/ECoding07/SB-franchising-system (branch `main`)
+**Repo state at time of writing:** `f8df581`, working tree clean
+
+> **Graded requirement:** the capstone panel requires the operator side to ship as a **mobile app**. Phases 6 and 7 are therefore the critical path. See section 2.
 
 ---
 
@@ -25,6 +29,8 @@ This is the first thing Phase 6 fixes, not because it is the largest item but be
 ## 2. Scope correction — the operator side is a mobile app
 
 An earlier assumption in this project's planning was that the operator-facing UI would live in the web portal alongside staff. **That is wrong.** The operator side is the Expo/React Native app; the web app is for staff and admin.
+
+> **Confirmed by the user: the capstone panel requires the operator side to be a mobile app.** This is a graded deliverable, not a preference. Mobile work is therefore on the critical path and must not be traded away for admin features. The phase order below reflects that.
 
 Consequence: the operator portal already built at `SBTF-website/src/app/(operator)/` is in the architecturally wrong place. It is **kept temporarily** as a reference and fallback, with its business logic extracted so the mobile app and the web portal share one implementation. Whether it ships is a later decision.
 
@@ -116,17 +122,42 @@ Follow `SBTF-application/AGENTS.md` — it is binding and currently being violat
 
 Other binding rules: always `npx expo install` (never raw `npm add`); never hand-create `ios/`/`android/`; native modules require a dev build, not Expo Go — which applies to `expo-secure-store` and any native Supabase storage dependency.
 
+### 7.0 Prove the build toolchain first — do this before writing any screen
+
+**This is the single biggest schedule risk to a graded mobile deliverable, and it is cheap to test.** Do it first.
+
+`SBTF-application/AGENTS.md:40`:
+
+> Expo Go only includes its bundled native modules. After adding a library with native code, the app needs a development build: `npx expo run:ios|android` locally, or `eas build --profile development`.
+
+`expo-secure-store` is already a dependency and is registered as a config plugin (`app.json:24-26`). It is a **native module**. Once Phase 7 wires it for session persistence — the correct choice for auth tokens — **the app will no longer run in Expo Go.**
+
+There is no clean escape. `@react-native-async-storage/async-storage` is also a native module, so switching to it just moves the problem. React Native has no `document.cookie`, so a persisted session always needs a native store.
+
+**Therefore: plan for a development/EAS build, and prove it works before investing in the app.** If the toolchain cannot produce an APK on this machine, that must be discovered before Phase 7.2, not after.
+
+Two gaps that block any cloud build, both currently missing:
+
+- **`app.json` has no `bundleIdentifier` (iOS) or `package` (Android).** EAS requires both. Set them before attempting a build.
+- **No `eas.json` exists.** Needs a `development` profile at minimum (`AGENTS.md:34`).
+
+Confirm the demo path with the user before building screens — if the panel expects a QR-code scan, the presentation plan changes.
+
 ### 7.1 Setup
 
+- Set app identity in `app.json` (`ios.bundleIdentifier`, `android.package`) and add `eas.json` with a `development` profile.
 - Add `expo-router` and `@supabase/supabase-js`. **Not `@supabase/ssr`** — it is cookie/Request-Response based and does not work in React Native. Neither existing web client is RN-compatible (`client.ts` uses `createBrowserClient`, `server.ts` imports `next/headers`).
-- Wire `expo-secure-store` for session persistence (already installed and registered as a config plugin in `app.json:24-26`).
+- Wire `expo-secure-store` for session persistence (already installed, plugin already registered).
 - Create `src/app/` with `_layout.tsx`; repoint `package.json` `main` from `index.ts` to the router entry; register the router in `app.json`.
+- Use `npx` — `AGENTS.md:13` says `bunx` only if `bun.lock` is present, and it is not.
 
 ### 7.2 Screens
 
 `sign-in` → `profile` → `dashboard` → `applications/new` (dynamic units) → `applications/[id]` (documents, camera capture) → `notifications`.
 
 Reuse `@sb/shared` Zod schemas and constants (`APPLICATION_TYPES`, `DOCUMENT_TYPE_LABELS`, `MAX_DOCUMENT_BYTES`, `ALLOWED_DOCUMENT_MIME_TYPES`) so client and server validation stay consistent.
+
+The `notifications` screen and rendering of staff rejection reasons (`doc.remarks`) are what close the feedback-loop bug from section 1 for the operator. This is the deliverable the panel will exercise directly.
 
 ### 7.3 Note
 
@@ -135,6 +166,8 @@ Reuse `@sb/shared` Zod schemas and constants (`APPLICATION_TYPES`, `DOCUMENT_TYP
 ---
 
 ## 6. Phase 8 — Test suite
+
+**Priority:** lower than Phases 6 and 7. Because mobile is a panel requirement, this is deliberately **not** moved ahead of app-building work. It is placed here because the refactors in Phases 6 and 7 are what make it cheap, and because untested shared logic shared by two clients is the main correctness risk introduced by the API approach.
 
 **Goal:** make the verification reproducible from the repo.
 
@@ -150,6 +183,8 @@ No CI exists (`.github/` absent). Out of scope unless asked.
 ---
 
 ## 7. Phase 9 — Admin surface
+
+> **Deliberately deferred.** The user initially chose this as the next build, but once it was confirmed that mobile is a panel requirement, mobile moved ahead. This phase remains valuable and is not cancelled — it is queued behind the graded deliverable.
 
 **Goal:** make the dormant seeded permissions real. 14 of 29 seeded permissions are currently unreachable in the UI.
 
@@ -177,10 +212,11 @@ Priority order:
 
 ## 9. Housekeeping before continuing
 
-- **Rotate or delete the test accounts** — `admin@mabini.gov.ph`, `staff.test@mabini.gov.ph`, `operator.test@mabini.gov.ph` on `mabini.gov.ph`. They were created for verification, are documented as throwaway, and now sit in a **public** repo alongside a precise description of the application model. Not urgent for a capstone, but must not reach a real deployment.
+- **Rotate or delete the test accounts** — `admin@mabini.gov.ph`, `staff.test@mabini.gov.ph`, `operator.test@mabini.gov.ph` on `mabini.gov.ph`. They were created for verification, are documented as throwaway, and now sit in a **public** repo (https://github.com/ECoding07/SB-franchising-system) alongside a precise description of the application model. Not urgent for a capstone, but must not reach a real deployment.
+- **Stop the stale dev server.** A `next start` process may still hold port 3000 from the 30 Sep verification. Check with `Get-NetTCPConnection -LocalPort 3000 -State Listen`, then `Stop-Process -Id <pid> -Force`. It serves a stale build otherwise.
 - **Watch memory.** The machine has ~7.2 GB RAM and previously hit severe memory pressure. Run typecheck / lint / build **sequentially**, never in parallel.
-- **PowerShell gotchas:** no heredocs (`<<'EOF'` fails) — write commit messages to a file and use `git commit -F`. `git push` can hang silently on a Credential Manager dialog; run it backgrounded with output redirected, then poll the log and `git rev-list --left-right --count origin/main...main` to confirm.
-- **`git push` verification:** background it, then confirm `origin/main...main` reports `0  0`.
+- **PowerShell gotchas:** no heredocs (`<<'EOF'` fails) — write commit messages to a file and use `git commit -F`. `git push` can hang silently on a Credential Manager dialog; run it backgrounded with output redirected, then poll the log and `git rev-list --left-right --count origin/main...main` to confirm. If stuck `git` processes remain, kill them and retry with `GCM_INTERACTIVE=Never` set.
+- **Remote:** `origin` = `https://github.com/ECoding07/SB-franchising-system.git`, branch `main`.
 
 ---
 
@@ -188,3 +224,4 @@ Priority order:
 
 - **`tsbuildinfo` is not committed.** An audit flagged it as a tracked build artifact; it is not. Ignore that finding if it resurfaces.
 - **The 30 Sep report describes notifications as a delivered feature.** Phases 4–5 notifications are written but never displayed. The report is accurate about the writes and inaccurate about delivery; Phase 6 corrects this.
+- **The panel requires a mobile app on the operator side.** This is now recorded in section 2; it was previously assumed to be a preference and is not.
