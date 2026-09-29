@@ -1,0 +1,426 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum RoleName {
+  operator
+  staff
+  admin
+}
+
+enum AccountStatus {
+  pending
+  active
+  suspended
+}
+
+enum PersonType {
+  operator
+  driver
+}
+
+enum Citizenship {
+  filipino
+  foreign
+}
+
+enum OwnershipType {
+  single_proprietorship
+  cooperative
+  corporation
+}
+
+enum ApplicationType {
+  new
+  renewal
+}
+
+enum ApplicationStatus {
+  draft
+  pending
+  under_review
+  needs_requirements
+  approved
+  rejected
+}
+
+enum DocumentType {
+  membership_certificate
+  barangay_clearance
+  or_cr
+  cedula
+}
+
+enum DocumentStatus {
+  pending
+  verified
+  rejected
+}
+
+enum FranchiseStatus {
+  active
+  expired
+  revoked
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  authUserId   String?  @unique @map("auth_user_id")
+  status       AccountStatus @default(pending)
+  lastLoginAt  DateTime? @map("last_login_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  profile               OperatorProfile?
+  userRoles             UserRole[]
+  grantedUserRoles      UserRole[]            @relation("UserRoleGrant")
+  notifications         Notification[]
+  activityLogs          ActivityLog[]
+  loginAttempts         LoginAttempt[]
+  reviews               FranchiseApplication[] @relation("ApplicationReviewer")
+  paymentRecords        Payment[]             @relation("PaymentRecorder")
+  rolePermissionGrants  RolePermission[]       @relation("RolePermissionGrant")
+
+  @@map("users")
+}
+
+model Role {
+  id          String       @id @default(uuid())
+  name        String       @unique
+  description String?
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  permissions RolePermission[]
+  userRoles   UserRole[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String       @id @default(uuid())
+  code        String       @unique
+  description String?
+  createdAt   DateTime     @default(now()) @map("created_at")
+
+  rolePermissions RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String @map("role_id")
+  permissionId String @map("permission_id")
+  grantedAt    DateTime @default(now()) @map("granted_at")
+  grantedBy    String? @map("granted_by")
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  grantor    User?      @relation("RolePermissionGrant", fields: [grantedBy], references: [id], onDelete: SetNull)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model UserRole {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  roleId    String   @map("role_id")
+  grantedAt DateTime @default(now()) @map("granted_at")
+  grantedBy String?  @map("granted_by")
+
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  role    Role   @relation(fields: [roleId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  grantor User?  @relation("UserRoleGrant", fields: [grantedBy], references: [id], onDelete: SetNull)
+
+  @@unique([userId, roleId])
+  @@map("user_roles")
+}
+
+model OperatorProfile {
+  id              String       @id @default(uuid())
+  userId          String       @unique @map("user_id")
+  personType      PersonType   @map("person_type")
+  firstName       String       @map("first_name")
+  middleName      String?      @map("middle_name")
+  lastName        String       @map("last_name")
+  citizenship     Citizenship  @default(filipino)
+  addressBarangay String       @map("address_barangay")
+  addressTownProvince String   @map("address_town_province")
+  contactNo       String       @map("contact_no")
+  ctcNo           String?      @map("ctc_no")
+  ctcIssuedAt     String?      @map("ctc_issued_at")
+  ctcIssuedOn     String?      @map("ctc_issued_on")
+  licenseNo       String?      @map("license_no")
+  todaId          String?      @map("toda_id")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+
+  user         User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  toda         Toda?                @relation(fields: [todaId], references: [id], onDelete: SetNull)
+  applications FranchiseApplication[]
+  franchiseRecords FranchiseRecord[]
+
+  @@index([lastName, firstName])
+  @@index([todaId])
+  @@map("operator_profiles")
+}
+
+model Toda {
+  id          String    @id @default(uuid())
+  name        String
+  municipality String
+  presidentName String? @map("president_name")
+  contactNo   String?   @map("contact_no")
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  operators    OperatorProfile[]
+  applications FranchiseApplication[]
+
+  @@unique([name, municipality])
+  @@index([isActive])
+  @@map("toda")
+}
+
+model FranchiseApplication {
+  id              String            @id @default(uuid())
+  applicationNo   String            @unique @map("application_no")
+  operatorId      String            @map("operator_id")
+  todaId          String?           @map("toda_id")
+  applicationType ApplicationType   @map("application_type")
+  status          ApplicationStatus @default(draft)
+  appliedRoute    String            @map("applied_route")
+  numberOfUnits   Int               @default(1) @map("number_of_units")
+  registeredOwner String            @map("registered_owner")
+  ownershipType   OwnershipType     @map("ownership_type")
+  comTaxCertNo    String?           @map("com_tax_cert_no")
+  comTaxIssuedAt  String?           @map("com_tax_issued_at")
+  comTaxIssuedOn  String?           @map("com_tax_issued_on")
+  dateSubmitted   DateTime?         @map("date_submitted")
+  dateApproved    DateTime?         @map("date_approved")
+  validUntil      DateTime?         @map("valid_until")
+  remarks         String?
+  reviewedBy      String?           @map("reviewed_by")
+  reviewedAt      DateTime?         @map("reviewed_at")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  operator    OperatorProfile            @relation(fields: [operatorId], references: [id], onDelete: Cascade)
+  toda        Toda?                      @relation(fields: [todaId], references: [id], onDelete: SetNull)
+  reviewer    User?                      @relation("ApplicationReviewer", fields: [reviewedBy], references: [id], onDelete: SetNull)
+  units       ApplicationUnit[]
+  documents   ApplicationDocument[]
+  statusHistory ApplicationStatusHistory[]
+  payments    Payment[]
+  franchiseRecord FranchiseRecord?
+
+  @@index([status])
+  @@index([operatorId])
+  @@index([applicationType])
+  @@index([todaId])
+  @@index([dateSubmitted])
+  @@map("franchise_applications")
+}
+
+model ApplicationUnit {
+  id          String @id @default(uuid())
+  applicationId String @map("application_id")
+  make        String
+  model       String
+  motorNo     String @map("motor_no")
+  engineNo    String? @map("engine_no")
+  chassisNo   String @map("chassis_no")
+  plateNo     String @map("plate_no")
+  certificateOfRegistrationNo String? @map("certificate_of_registration_no")
+
+  application FranchiseApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@unique([applicationId, motorNo])
+  @@map("application_units")
+}
+
+model ApplicationDocument {
+  id            String         @id @default(uuid())
+  applicationId String         @map("application_id")
+  documentType  DocumentType   @map("document_type")
+  filePath      String         @map("file_path")
+  fileName      String         @map("file_name")
+  fileSize      Int            @map("file_size")
+  mimeType      String         @map("mime_type")
+  status        DocumentStatus @default(pending)
+  remarks       String?
+  verifiedBy    String?        @map("verified_by")
+  verifiedAt    DateTime?      @map("verified_at")
+  uploadedAt    DateTime       @default(now()) @map("uploaded_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+
+  application FranchiseApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@unique([applicationId, documentType])
+  @@index([status])
+  @@map("application_documents")
+}
+
+model ApplicationStatusHistory {
+  id            String            @id @default(uuid())
+  applicationId String            @map("application_id")
+  status        ApplicationStatus
+  changedBy     String?           @map("changed_by")
+  changedAt     DateTime          @default(now()) @map("changed_at")
+  remarks       String?
+
+  application FranchiseApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId, changedAt])
+  @@map("application_status_history")
+}
+
+model FranchiseRecord {
+  id          String          @id @default(uuid())
+  applicationId String         @unique @map("application_id")
+  operatorId  String          @map("operator_id")
+  franchiseCertificateNo String @unique @map("franchise_certificate_no")
+  dateIssued  DateTime        @map("date_issued")
+  validUntil  DateTime        @map("valid_until")
+  route       String
+  status      FranchiseStatus @default(active)
+  issuedBy    String?         @map("issued_by")
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+
+  application FranchiseApplication @relation(fields: [applicationId], references: [id], onDelete: Restrict)
+  operator    OperatorProfile      @relation(fields: [operatorId], references: [id], onDelete: Restrict)
+
+  @@index([status])
+  @@index([validUntil])
+  @@index([operatorId])
+  @@map("franchise_records")
+}
+
+model Payment {
+  id            String   @id @default(uuid())
+  applicationId String   @map("application_id")
+  orNo          String   @unique @map("or_no")
+  amountPaid    Decimal  @map("amount_paid") @db.Decimal(10, 2)
+  datePaid      DateTime @map("date_paid")
+  recordedBy    String?  @map("recorded_by")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  application FranchiseApplication @relation(fields: [applicationId], references: [id], onDelete: Restrict)
+  recordedByUser User?             @relation("PaymentRecorder", fields: [recordedBy], references: [id], onDelete: SetNull)
+
+  @@map("payments")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  title     String
+  message   String
+  type      String
+  link      String?
+  isRead    Boolean  @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+model ActivityLog {
+  id        String    @id @default(uuid())
+  userId    String?   @map("user_id")
+  userEmail String?   @map("user_email")
+  userRole  RoleName? @map("user_role")
+  module    String
+  action    String
+  targetType String?  @map("target_type")
+  targetId  String?   @map("target_id")
+  ipAddress String?   @map("ip_address")
+  userAgent String?   @map("user_agent")
+  metadata  Json?
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([module, action])
+  @@index([createdAt])
+  @@map("activity_logs")
+}
+
+model LoginAttempt {
+  id        String    @id @default(uuid())
+  userId    String?   @map("user_id")
+  email     String
+  ipAddress String?   @map("ip_address")
+  userAgent String?   @map("user_agent")
+  success   Boolean
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("login_attempts")
+}
+
+model SystemSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt @map("updated_at")
+  updatedBy String?  @map("updated_by")
+
+  @@map("system_settings")
+}
+
+model AnalyticsSummary {
+  id        String   @id @default(uuid())
+  periodKey String   @map("period_key")
+  metric    String
+  value     Decimal  @db.Decimal(15, 4)
+  source    String?
+  generatedBy String? @map("generated_by")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([periodKey, metric])
+  @@map("analytics_summaries")
+}
+
+model DashboardReport {
+  id         String   @id @default(uuid())
+  title      String
+  description String?
+  type       String
+  config     Json?
+  generatedBy String? @map("generated_by")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  exports ReportExport[]
+
+  @@map("dashboard_reports")
+}
+
+model ReportExport {
+  id          String   @id @default(uuid())
+  reportId    String   @map("report_id")
+  format      String
+  filePath    String?  @map("file_path")
+  exportedBy  String?  @map("exported_by")
+  exportedAt  DateTime @default(now()) @map("exported_at")
+
+  report DashboardReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@index([exportedAt])
+  @@map("report_exports")
+}
