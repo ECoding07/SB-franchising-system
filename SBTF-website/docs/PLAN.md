@@ -32,7 +32,7 @@ An earlier assumption in this project's planning was that the operator-facing UI
 
 > **Confirmed by the user: the capstone panel requires the operator side to be a mobile app.** This is a graded deliverable, not a preference. Mobile work is therefore on the critical path and must not be traded away for admin features. The phase order below reflects that.
 
-Consequence: the operator portal already built at `SBTF-website/src/app/(operator)/` is in the architecturally wrong place. It is **kept temporarily** as a reference and fallback, with its business logic extracted so the mobile app and the web portal share one implementation. Whether it ships is a later decision.
+Consequence: the operator portal already built at `SBTF-website/src/app/(operator)/` is in the architecturally wrong place. It is **kept temporarily** as a reference and fallback, with its business logic extracted so the mobile app and the web portal share one implementation. Whether it ships before the capstone is **Q2** in §10.
 
 ---
 
@@ -141,7 +141,7 @@ Two gaps that block any cloud build, both currently missing:
 - **`app.json` has no `bundleIdentifier` (iOS) or `package` (Android).** EAS requires both. Set them before attempting a build.
 - **No `eas.json` exists.** Needs a `development` profile at minimum (`AGENTS.md:34`).
 
-Confirm the demo path with the user before building screens — if the panel expects a QR-code scan, the presentation plan changes.
+Confirm the demo path with the user before building screens — see **Q1** in §10. If the panel expects a QR-code scan, the presentation plan changes.
 
 ### 7.1 Setup
 
@@ -184,7 +184,7 @@ No CI exists (`.github/` absent). Out of scope unless asked.
 
 ## 7. Phase 9 — Admin surface
 
-> **Deliberately deferred.** The user initially chose this as the next build, but once it was confirmed that mobile is a panel requirement, mobile moved ahead. This phase remains valuable and is not cancelled — it is queued behind the graded deliverable.
+> **Deliberately deferred.** The user initially chose this as the next build, but once it was confirmed that mobile is a panel requirement, mobile moved ahead. This phase remains valuable and is not cancelled — it is queued behind the graded deliverable. **Q3** in §10 asks whether the panel grades admin functionality, which would change that ordering.
 
 **Goal:** make the dormant seeded permissions real. 14 of 29 seeded permissions are currently unreachable in the UI.
 
@@ -220,8 +220,44 @@ Priority order:
 
 ---
 
-## 10. Corrections to earlier documentation
+## 10. Open questions — deferred to the user
+
+Recorded so nothing is lost between sessions. These are decisions only the user can make, not gaps in the plan. **Do not guess at any of them** — each changes the work materially.
+
+### Q1. How will the mobile app be demonstrated? *(ask before Phase 7.0)*
+
+The most consequential open question. `expo-secure-store` is a native module, so the app will not run in Expo Go once it persists the session (see §7.0). The demo path determines whether an EAS account, signing, and a build pipeline are needed.
+
+- **EAS cloud build** — install `expo-dev-client` from EAS, or run the debug variant of an EAS build. Needs a free Expo account.
+- **Local native build** — `npx expo run:android` with Android Studio, or `run:ios` with Xcode (macOS only). This machine is Windows, so **iOS local builds are not possible**.
+- **Expo Go with a workaround** — possible only by storing the session somewhere non-native (e.g. in-memory + re-login each launch). Weakens the product and is not recommended.
+
+**Needed from the user:** Expo account available? Android device for demo? Presentation expects a QR scan or a pre-installed build? Time-boxed to be built how?
+
+### Q2. Does the operator web portal ship, or is it deleted before the capstone?
+
+Currently "kept temporarily" (see §2). It works and is a usable fallback, but it is not the graded deliverable and it duplicates the mobile experience.
+
+- Ship both — operators get a browser option; costs maintenance of two clients.
+- Delete before submission — cleaner deliverable, matches the panel requirement exactly, loses the fallback if a phone has no network at demo time.
+
+**Needed from the user:** keep or delete?
+
+### Q3. Is the admin surface expected before the panel?
+
+Phase 9 is deferred (§7). If the panel grades admin/analytics functionality, the deferral is wrong and the phase order should change.
+
+**Needed from the user:** does the panel grade anything beyond operator-mobile + staff web?
+
+### Q4. Which test accounts are in use, and are they rotated?
+
+Housekeeping, but user-owned (§9). The three `mabini.gov.ph` accounts were created for verification and sit in a **public** repo describing the application model.
+
+---
+
+## 11. Corrections to earlier documentation
 
 - **`tsbuildinfo` is not committed.** An audit flagged it as a tracked build artifact; it is not. Ignore that finding if it resurfaces.
 - **The 30 Sep report describes notifications as a delivered feature.** Phases 4–5 notifications are written but never displayed. The report is accurate about the writes and inaccurate about delivery; Phase 6 corrects this.
 - **The panel requires a mobile app on the operator side.** This is now recorded in section 2; it was previously assumed to be a preference and is not.
+- **Session 30 Sep handoff.** The previous summary carried an outdated claim that `franchise_fee` was unreadable and the bucket uncreated; both were resolved earlier. It also listed `/admin`, `/staff`, `/operator` as route paths, which are route *groups* — the real URLs are `/overview`, `/queue`, `/dashboard`.
