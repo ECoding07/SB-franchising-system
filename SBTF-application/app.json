@@ -23,6 +23,12 @@
     },
     "plugins": [
       "expo-secure-store"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "13244804-3f65-4508-a51f-7d92dd75f332"
+      }
+    },
+    "owner": "itian_app"
   }
 }
