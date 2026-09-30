@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useActionState } from "react";
 
+import { PasswordField } from "@/components/password-field";
+
 import { signUpAction, type AuthFormState } from "../actions";
 
 const initialState: AuthFormState = {};
@@ -29,33 +31,21 @@ export function SignUpForm() {
           className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm"
         />
       </div>
-      <div className="space-y-1">
-        <label htmlFor="password" className="text-sm font-medium">
-          Password
-        </label>
-        <input
-          id="password"
-          name="password"
-          type="password"
-          required
-          minLength={8}
-          autoComplete="new-password"
-          className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm"
-        />
-      </div>
-      <div className="space-y-1">
-        <label htmlFor="confirmPassword" className="text-sm font-medium">
-          Confirm password
-        </label>
-        <input
-          id="confirmPassword"
-          name="confirmPassword"
-          type="password"
-          required
-          autoComplete="new-password"
-          className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm"
-        />
-      </div>
+      <PasswordField
+        id="password"
+        name="password"
+        label="Password"
+        autoComplete="new-password"
+        required
+        minLength={8}
+      />
+      <PasswordField
+        id="confirmPassword"
+        name="confirmPassword"
+        label="Confirm password"
+        autoComplete="new-password"
+        required
+      />
       {state.error ? (
         <p role="alert" className="text-sm text-red-600">
           {state.error}

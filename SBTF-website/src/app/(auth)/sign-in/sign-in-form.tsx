@@ -2,6 +2,8 @@
 
 import { useActionState } from "react";
 
+import { PasswordField } from "@/components/password-field";
+
 import { signInAction, type AuthFormState } from "../actions";
 
 const initialState: AuthFormState = {};
@@ -28,19 +30,13 @@ export function SignInForm() {
           className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm"
         />
       </div>
-      <div className="space-y-1">
-        <label htmlFor="password" className="text-sm font-medium">
-          Password
-        </label>
-        <input
-          id="password"
-          name="password"
-          type="password"
-          required
-          autoComplete="current-password"
-          className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm"
-        />
-      </div>
+      <PasswordField
+        id="password"
+        name="password"
+        label="Password"
+        autoComplete="current-password"
+        required
+      />
       {state.error ? (
         <p role="alert" className="text-sm text-red-600">
           {state.error}
