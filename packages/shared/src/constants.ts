@@ -1,4 +1,4 @@
-export const APP_NAME = "SBTF System";
+export const APP_NAME = "Mabini Tricycle Franchising System";
 export const APP_DESCRIPTION =
   "Sangguniang Barangay Tricycle Franchise (SBTF) System — Municipality of Mabini, Batangas";
 
